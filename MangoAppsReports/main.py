@@ -2,6 +2,9 @@ import sys
 import os
 import json
 import pandas as pd
+from openpyxl import Workbook
+from openpyxl.chart import BarChart, Reference
+from openpyxl.drawing.image import Image
 from db_helper import DatabaseConnection
 
 db = DatabaseConnection(host="localhost", user="root", password="root", database="mangoapps_dev")
@@ -67,18 +70,112 @@ def get_recognition_data(db, parse_recognition_name):
     }
     return recognition_hash, awardees_hash, approver_hash
 
+def generate_multi_chart_reports_v2(xlsx_package, xls_data_recognized, xls_data_issuers):
+    # Select the active worksheet
+    sheet = xlsx_package.active
+    sheet.title = "Recognitions Report"
+
+    # Add header for the report
+    sheet.append(['RECOGNITIONS REPORT'])
+    sheet.append(['Dec 01, 2023 - Nov 30, 2024'])
+    sheet.append([])  # Empty row for spacing
+
+    # Create "Most Recognized Recipients" chart
+    sheet.append(['Most Recognized Recipients'])
+    sheet.append(['Name', 'Count'])
+    for row in xls_data_recognized:
+        sheet.append(row)
+
+    chart1 = BarChart()
+    chart1.title = "Most Recognized Recipients"
+    chart1.x_axis.title = 'Name'
+    chart1.y_axis.title = 'Count'
+
+    data1 = Reference(sheet, min_col=2, min_row=5, max_row=4 + len(xls_data_recognized), max_col=2)
+    categories1 = Reference(sheet, min_col=1, min_row=5, max_row=4 + len(xls_data_recognized))
+    chart1.add_data(data1, titles_from_data=False)
+    chart1.set_categories(categories1)
+
+    sheet.add_chart(chart1, "E5")
+
+    # Create "Top Issuing Users" chart
+    start_row = 6 + len(xls_data_recognized)
+    sheet.append([])
+    sheet.append(['Top Issuing Users'])
+    sheet.append(['Name', 'Count'])
+    for row in xls_data_issuers:
+        sheet.append(row)
+
+    chart2 = BarChart()
+    chart2.title = "Top Issuing Users"
+    chart2.x_axis.title = 'Name'
+    chart2.y_axis.title = 'Count'
+
+    data2 = Reference(sheet, min_col=2, min_row=start_row + 2, max_row=start_row + 1 + len(xls_data_issuers), max_col=2)
+    categories2 = Reference(sheet, min_col=1, min_row=start_row + 2, max_row=start_row + 1 + len(xls_data_issuers))
+    chart2.add_data(data2, titles_from_data=False)
+    chart2.set_categories(categories2)
+
+    sheet.add_chart(chart2, f"E{start_row + 2}")
+
+
+def generate_excel_report(xls_data):
+    xlsx_package = Workbook()
+    generate_multi_chart_reports_v2(xlsx_package, xls_data)
+    xlsx_package.save("multi_chart_report.xlsx")
+
 try:
     db.connect()
     recognition_hash, awardees_hash, approver_hash = get_recognition_data(db, parse_recognition_name)
     print(recognition_hash)
     print(awardees_hash)
     print(approver_hash)
-        
+    
+    xls_data = {}
+    xls_data['first_header'] = "RECOGNITIONS REPORT"
+    xls_data['second_header'] = "Dec 01, 2023 - Nov 30, 2024"
+    xls_data['header_font_size'] = 11
 
-    # output_file = "Recognition_Awards_Report.xlsx"
-    # with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
-    #     recog_data.to_excel(writer, sheet_name="Recognition", index=False)
-    #     award_data.to_excel(writer, sheet_name="Awards", index=False)
+    top_award_givers_count_hash = {}
+    top_award_givers_name_hash = {}
+
+    for key, value in recognition_hash.items():
+        recognition_by_name_key = value['message_by_id']  # Avoid using username as key, use userid instead
+
+        if recognition_by_name_key not in top_award_givers_count_hash:
+            top_award_givers_count_hash[recognition_by_name_key] = 0
+
+        top_award_givers_count_hash[recognition_by_name_key] += 1
+        top_award_givers_name_hash[recognition_by_name_key] = value['message_by']
+
+
+    xls_data = [
+        top_award_givers_count_hash,
+        top_award_givers_name_hash
+    ]
+
+    # generate_excel_report(xls_data)
+
+    #---------------------------------
+
+    # Example data
+    xls_data_recognized = [
+        ['Namrata Puranik Puranik', 51],
+        ['Gauri Puranik', 16],
+        ['Aalkhimovich aalk', 16],
+        ['Alumni User', 10],
+        ['Ankur Tripathi', 7]
+    ]
+
+    xls_data_issuers = [
+        ['Gauri Puranik', 84],
+        ['Namrata Puranik Puranik', 21]
+    ]
+
+    # Generate the report
+    xlsx_package = Workbook()
+    generate_multi_chart_reports_v2(xlsx_package, xls_data_recognized, xls_data_issuers)
+    xlsx_package.save("multi_chart_report.xlsx")
 except Exception as ex:
     print(ex)
 finally:
