@@ -68,7 +68,6 @@ mrr_worksheet.hide()
 for row_num, (name, value) in enumerate(chart_data, start=1):
     mrr_worksheet.write(row_num, 0, name)
     mrr_worksheet.write(row_num, 1, value)
-    mrr_worksheet.write(row_num, 2, "#"+ custom_colors[row_num-1])
 
 chart = workbook.add_chart({"type": "column"})
 summary_worksheet.select()
