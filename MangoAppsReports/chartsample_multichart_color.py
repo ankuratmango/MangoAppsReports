@@ -95,46 +95,6 @@ chart.set_legend({"position": "right"})
 
 summary_worksheet.insert_chart("D2", chart)
 
-
-#---------------------
-chart_data_issuers = [
-        ('Gauri Puranik', 84),
-        ('Namrata Puranik Puranik', 21)
-]
-custom_colors = generate_random_colors(len(chart_data_issuers))
-#workbook = xlsxwriter.Workbook(output_path)
-#summary_worksheet = workbook.add_worksheet("Summary")
-mrr_worksheet = workbook.add_worksheet("MRR_I")
-mrr_worksheet.hide()
-for row_num, (name, value) in enumerate(chart_data_issuers, start=1):
-    mrr_worksheet.write(row_num, 0, name)
-    mrr_worksheet.write(row_num, 1, value)
-
-chart_i = workbook.add_chart({"type": "column"})
-summary_worksheet.select()
-mrr_worksheet.hide()
-points = [{"fill": {"color": f"#{color}"}} for color in custom_colors]
-chart_i.add_series({
-    "categories": f"=MRR_I!$A$2:$A${len(chart_data_issuers) + 1}",
-    "values": f"=MRR_I!$B$2:$B${len(chart_data_issuers) + 1}",
-    "data_labels": {"value": True},
-    "points": points,  
-})
-
-chart_i.set_title({"name": "Top Issuing Users"})
-chart_i.set_x_axis({
-    "name": "Recipient",
-    "name_font": {"size": 12, "bold": True},
-    "num_font": {"rotation": -45},  
-})
-chart_i.set_y_axis({
-    "name": "Count",
-    "name_font": {"size": 12, "bold": True},
-})
-chart_i.set_legend({"position": "right"})
-summary_worksheet.insert_chart("D20", chart_i)
-
-
 workbook.close()
 
 print(f"Excel file created successfully: {output_path}")
