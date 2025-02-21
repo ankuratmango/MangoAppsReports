@@ -1,120 +1,94 @@
 import xlsxwriter
 import random
-from typing import List, Tuple
 
-class ColorGenerator:
-    @staticmethod
-    def generate_random_colors(count: int) -> List[str]:
-        """Generate a list of unique random colors."""
-        colors = set()
+class ChartGenerator:
+    def __init__(self, chart_data, chart_data_issuers, output_path="static_chart.xlsx"):
+        self.chart_data = chart_data
+        self.chart_data_issuers = chart_data_issuers
+        self.output_path = output_path
+        self.workbook = xlsxwriter.Workbook(self.output_path)
+        self.summary_worksheet = self.workbook.add_worksheet("Summary")
+    
+    def generate_random_colors(self, count):
+        colors = []
         while len(colors) < count:
-            colors.add(ColorGenerator._random_color())
-        return list(colors)
+            color = self.random_color()
+            if color not in colors:
+                colors.append(color)
+        return colors
 
-    @staticmethod
-    def _random_color() -> str:
-        """Generate a single random color using HSV to RGB conversion."""
-        golden_ratio = 0.618033988749895
-        h = (random.random() + golden_ratio) % 1
-        r, g, b = ColorGenerator._hsv_to_rgb(h, 0.5, 0.95)
-        return f"{r:02X}{g:02X}{b:02X}"
+    def random_color(self):
+        golden_ratio_conjugate = 0.618033988749895
+        h = random.random()
+        h += golden_ratio_conjugate
+        h %= 1
+        r, g, b = self.hsv_to_rgb(h, 0.5, 0.95)
+        return f"{self.to_hex(r)}{self.to_hex(g)}{self.to_hex(b)}"
 
-    @staticmethod
-    def _hsv_to_rgb(h: float, s: float, v: float) -> Tuple[int, int, int]:
-        """Convert HSV color values to RGB."""
+    def to_hex(self, n):
+        return f"{n:02X}"
+
+    def hsv_to_rgb(self, h, s, v):
         h_i = int(h * 6)
         f = h * 6 - h_i
-        p, q, t = v * (1 - s), v * (1 - f * s), v * (1 - (1 - f) * s)
+        p = v * (1 - s)
+        q = v * (1 - f * s)
+        t = v * (1 - (1 - f) * s)
         
-        rgb_map = {
-            0: (v, t, p),
-            1: (q, v, p),
-            2: (p, v, t),
-            3: (p, q, v),
-            4: (t, p, v),
-            5: (v, p, q)
-        }
-        r, g, b = rgb_map.get(h_i, (0, 0, 0))
+        if h_i == 0:
+            r, g, b = v, t, p
+        elif h_i == 1:
+            r, g, b = q, v, p
+        elif h_i == 2:
+            r, g, b = p, v, t
+        elif h_i == 3:
+            r, g, b = p, q, v
+        elif h_i == 4:
+            r, g, b = t, p, v
+        elif h_i == 5:
+            r, g, b = v, p, q
+        else:
+            r, g, b = 0, 0, 0  # Fallback
+        
         return int(r * 256), int(g * 256), int(b * 256)
-
-class ChartCreator:
-    def __init__(self, workbook: xlsxwriter.Workbook):
-        self.workbook = workbook
-        self.summary_ws = workbook.add_worksheet("Summary")
-
-    def _write_data_to_worksheet(self, worksheet: xlsxwriter.Worksheet, 
-                               data: List[Tuple[str, int]]) -> None:
-        """Write data to worksheet starting from row 1."""
-        for row, (name, value) in enumerate(data, 1):
-            worksheet.write(row, 0, name)
-            worksheet.write(row, 1, value)
-
-    def _create_chart(self, data: List[Tuple[str, int]], sheet_name: str, 
-                     title: str, x_axis_name: str) -> xlsxwriter.chart.Chart:
-        """Create and configure a column chart."""
-        worksheet = self.workbook.add_worksheet(sheet_name)
-        worksheet.hide()
-        self._write_data_to_worksheet(worksheet, data)
+    
+    def create_chart(self, sheet_name, data, chart_title, insert_position):
+        custom_colors = self.generate_random_colors(len(data))
+        mrr_worksheet = self.workbook.add_worksheet(sheet_name)
+        mrr_worksheet.hide()
+        
+        for row_num, (name, value) in enumerate(data, start=1):
+            mrr_worksheet.write(row_num, 0, name)
+            mrr_worksheet.write(row_num, 1, value)
         
         chart = self.workbook.add_chart({"type": "column"})
-        colors = ColorGenerator.generate_random_colors(len(data))
-        points = [{"fill": {"color": f"#{color}"}} for color in colors]
-        
+        self.summary_worksheet.select()
+        mrr_worksheet.hide()
+        points = [{"fill": {"color": f"#{color}"}} for color in custom_colors]
         chart.add_series({
             "categories": f"={sheet_name}!$A$2:$A${len(data) + 1}",
             "values": f"={sheet_name}!$B$2:$B${len(data) + 1}",
             "data_labels": {"value": True},
-            "points": points,
+            "points": points,  
         })
         
-        chart.set_title({"name": title})
+        chart.set_title({"name": chart_title})
         chart.set_x_axis({
-            "name": x_axis_name,
+            "name": "Recipient",
             "name_font": {"size": 12, "bold": True},
-            "num_font": {"rotation": -45},
+            "num_font": {"rotation": -45},  
         })
         chart.set_y_axis({
             "name": "Count",
             "name_font": {"size": 12, "bold": True},
         })
         chart.set_legend({"position": "right"})
-        return chart
-
-    def create_recipients_chart(self, data: List[Tuple[str, int]]) -> None:
-        """Create chart for most recognized recipients."""
-        chart = self._create_chart(
-            data, "MRR", "Most Recognized Recipients", "Recipient"
-        )
-        self.summary_ws.insert_chart("D2", chart)
-
-    def create_issuers_chart(self, data: List[Tuple[str, int]]) -> None:
-        """Create chart for top issuing users."""
-        chart = self._create_chart(
-            data, "MRR_I", "Top Issuing Users", "Recipient"
-        )
-        self.summary_ws.insert_chart("D20", chart)
-
-def main():
-    recipients_data = [
-        ("Namrata Puranik Puranik", 51),
-        ("Gauri Puranik", 16),
-        ("Aalkhimovich aalk", 16),
-        ("Alumni User", 10),
-        ("Ankur Tripathi", 7),
-    ]
+        
+        self.summary_worksheet.insert_chart(insert_position, chart)
     
-    issuers_data = [
-        ('Gauri Puranik', 84),
-        ('Namrata Puranik Puranik', 21)
-    ]
+    def generate_excel(self):
+        self.create_chart("MRR", self.chart_data, "Most Recognized Recipients", "D2")
+        self.create_chart("MRR_I", self.chart_data_issuers, "Top Issuing Users", "D20")
+        self.workbook.close()
+        print(f"Excel file created successfully: {self.output_path}")
 
-    output_path = "static_chart_no_data.xlsx"
-    with xlsxwriter.Workbook(output_path) as workbook:
-        chart_creator = ChartCreator(workbook)
-        chart_creator.create_recipients_chart(recipients_data)
-        chart_creator.create_issuers_chart(issuers_data)
-
-    print(f"Excel file created successfully: {output_path}")
-
-if __name__ == "__main__":
-    main()

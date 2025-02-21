@@ -6,6 +6,7 @@ from openpyxl import Workbook
 from openpyxl.chart import BarChart, Reference
 from openpyxl.drawing.image import Image
 from db_helper import DatabaseConnection
+from chartsample_multichart import ChartGenerator
 
 db = DatabaseConnection(host="localhost", user="root", password="root", database="mangoapps_dev")
 
@@ -154,28 +155,25 @@ try:
         top_award_givers_name_hash
     ]
 
-    # generate_excel_report(xls_data)
+    
 
     #---------------------------------
-
-    # Example data
-    xls_data_recognized = [
-        ['Namrata Puranik Puranik', 51],
-        ['Gauri Puranik', 16],
-        ['Aalkhimovich aalk', 16],
-        ['Alumni User', 10],
-        ['Ankur Tripathi', 7]
+    chart_data = [
+        ("Namrata Puranik Puranik", 51),
+        ("Gauri Puranik", 16),
+        ("Aalkhimovich aalk", 16),
+        ("Alumni User", 10),
+        ("Ankur Tripathi", 7),
     ]
-
-    xls_data_issuers = [
-        ['Gauri Puranik', 84],
-        ['Namrata Puranik Puranik', 21]
+    
+    chart_data_issuers = [
+        ("Gauri Puranik", 84),
+        ("Namrata Puranik Puranik", 21)
     ]
-
-    # Generate the report
-    xlsx_package = Workbook()
-    generate_multi_chart_reports_v2(xlsx_package, xls_data_recognized, xls_data_issuers)
-    xlsx_package.save("multi_chart_report.xlsx")
+    
+    generator = ChartGenerator(chart_data, chart_data_issuers)
+    generator.generate_excel()
+   
 except Exception as ex:
     print(ex)
 finally:

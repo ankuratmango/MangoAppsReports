@@ -56,6 +56,11 @@ chart_data = [
     ("Ankur Tripathi", 7),
 ]
 
+chart_data_issuers = [
+        ('Gauri Puranik', 84),
+        ('Namrata Puranik Puranik', 21)
+]
+
 custom_colors = generate_random_colors(len(chart_data))
 
 output_path = "static_chart_no_data.xlsx"
@@ -97,10 +102,7 @@ summary_worksheet.insert_chart("D2", chart)
 
 
 #---------------------
-chart_data_issuers = [
-        ('Gauri Puranik', 84),
-        ('Namrata Puranik Puranik', 21)
-]
+
 custom_colors = generate_random_colors(len(chart_data_issuers))
 #workbook = xlsxwriter.Workbook(output_path)
 #summary_worksheet = workbook.add_worksheet("Summary")
