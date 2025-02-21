@@ -2,12 +2,10 @@ import xlsxwriter
 import random
 
 class ChartGenerator:
-    def __init__(self, chart_data, chart_data_issuers, output_path="static_chart.xlsx"):
-        self.chart_data = chart_data
-        self.chart_data_issuers = chart_data_issuers
+    def __init__(self, xls_data, output_path="static_chart.xlsx"):
+        self.xls_data = xls_data
         self.output_path = output_path
         self.workbook = xlsxwriter.Workbook(self.output_path)
-        self.summary_worksheet = self.workbook.add_worksheet("Summary")
     
     def generate_random_colors(self, count):
         colors = []
@@ -48,7 +46,7 @@ class ChartGenerator:
         elif h_i == 5:
             r, g, b = v, p, q
         else:
-            r, g, b = 0, 0, 0  # Fallback
+            r, g, b = 0, 0, 0  
         
         return int(r * 256), int(g * 256), int(b * 256)
     
@@ -86,9 +84,33 @@ class ChartGenerator:
         
         self.summary_worksheet.insert_chart(insert_position, chart)
     
-    def generate_excel(self):
-        self.create_chart("MRR", self.chart_data, "Most Recognized Recipients", "D2")
-        self.create_chart("MRR_I", self.chart_data_issuers, "Top Issuing Users", "D20")
-        self.workbook.close()
+    def generate_excel_summary(self, sheet):
+        self.summary_worksheet = self.workbook.add_worksheet(sheet)
+        bold_format = self.workbook.add_format({"bold": True})
+        self.summary_worksheet.write("D2", self.xls_data['first_header'], bold_format)
+        self.summary_worksheet.write("D3", self.xls_data['second_header'])
+        self.create_chart("MRR", self.xls_data['chart_data'], "Most Recognized Recipients", "D6")
+        self.create_chart("MRR_I", self.xls_data['chart_data_issuers'], "Top Issuing Users", "D25")
         print(f"Excel file created successfully: {self.output_path}")
+
+    def generate_excel_data(self, sheet, headers):
+        self.data_worksheet = self.workbook.add_worksheet(sheet)
+        self.data_worksheet.select()
+        
+        header_format = self.workbook.add_format({
+            "bold": True,
+            "bg_color": "#2f75b5",
+            "font_color": "white",
+            "align": "center",
+            "border": 1
+        })
+
+        self.data_worksheet.write_row(0, 0, headers, header_format)
+        self.data_worksheet.autofilter(0, 0, 0, len(headers) - 1)
+
+        for col_num, header in enumerate(headers):
+            self.data_worksheet.set_column(col_num, col_num, len(header) + 5)
+
+        self.workbook.close()
+        
 

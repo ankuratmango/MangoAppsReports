@@ -21,6 +21,8 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="chartsample_multichart_color.py" />
+    <Compile Include="chartgenerator.py" />
     <Compile Include="chartsample.py" />
     <Compile Include="db_helper.py" />
     <Compile Include="main.py" />

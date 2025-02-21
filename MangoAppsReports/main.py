@@ -6,7 +6,8 @@ from openpyxl import Workbook
 from openpyxl.chart import BarChart, Reference
 from openpyxl.drawing.image import Image
 from db_helper import DatabaseConnection
-from chartsample_multichart import ChartGenerator
+from chartgenerator import ChartGenerator
+from collections import Counter
 
 db = DatabaseConnection(host="localhost", user="root", password="root", database="mangoapps_dev")
 
@@ -71,60 +72,6 @@ def get_recognition_data(db, parse_recognition_name):
     }
     return recognition_hash, awardees_hash, approver_hash
 
-def generate_multi_chart_reports_v2(xlsx_package, xls_data_recognized, xls_data_issuers):
-    # Select the active worksheet
-    sheet = xlsx_package.active
-    sheet.title = "Recognitions Report"
-
-    # Add header for the report
-    sheet.append(['RECOGNITIONS REPORT'])
-    sheet.append(['Dec 01, 2023 - Nov 30, 2024'])
-    sheet.append([])  # Empty row for spacing
-
-    # Create "Most Recognized Recipients" chart
-    sheet.append(['Most Recognized Recipients'])
-    sheet.append(['Name', 'Count'])
-    for row in xls_data_recognized:
-        sheet.append(row)
-
-    chart1 = BarChart()
-    chart1.title = "Most Recognized Recipients"
-    chart1.x_axis.title = 'Name'
-    chart1.y_axis.title = 'Count'
-
-    data1 = Reference(sheet, min_col=2, min_row=5, max_row=4 + len(xls_data_recognized), max_col=2)
-    categories1 = Reference(sheet, min_col=1, min_row=5, max_row=4 + len(xls_data_recognized))
-    chart1.add_data(data1, titles_from_data=False)
-    chart1.set_categories(categories1)
-
-    sheet.add_chart(chart1, "E5")
-
-    # Create "Top Issuing Users" chart
-    start_row = 6 + len(xls_data_recognized)
-    sheet.append([])
-    sheet.append(['Top Issuing Users'])
-    sheet.append(['Name', 'Count'])
-    for row in xls_data_issuers:
-        sheet.append(row)
-
-    chart2 = BarChart()
-    chart2.title = "Top Issuing Users"
-    chart2.x_axis.title = 'Name'
-    chart2.y_axis.title = 'Count'
-
-    data2 = Reference(sheet, min_col=2, min_row=start_row + 2, max_row=start_row + 1 + len(xls_data_issuers), max_col=2)
-    categories2 = Reference(sheet, min_col=1, min_row=start_row + 2, max_row=start_row + 1 + len(xls_data_issuers))
-    chart2.add_data(data2, titles_from_data=False)
-    chart2.set_categories(categories2)
-
-    sheet.add_chart(chart2, f"E{start_row + 2}")
-
-
-def generate_excel_report(xls_data):
-    xlsx_package = Workbook()
-    generate_multi_chart_reports_v2(xlsx_package, xls_data)
-    xlsx_package.save("multi_chart_report.xlsx")
-
 try:
     db.connect()
     recognition_hash, awardees_hash, approver_hash = get_recognition_data(db, parse_recognition_name)
@@ -137,42 +84,25 @@ try:
     xls_data['second_header'] = "Dec 01, 2023 - Nov 30, 2024"
     xls_data['header_font_size'] = 11
 
-    top_award_givers_count_hash = {}
-    top_award_givers_name_hash = {}
+    
+    issuer_count = Counter(entry['message_by'] for entry in recognition_hash.values())
+    chart_data_issuers = list(issuer_count.items())
+    chart_data = [(v['username'], int(v['award_count'])) for v in awardees_hash.values()]
 
-    for key, value in recognition_hash.items():
-        recognition_by_name_key = value['message_by_id']  # Avoid using username as key, use userid instead
+    xls_data['chart_data_issuers'] = chart_data_issuers
+    xls_data['chart_data'] = chart_data
+    
+    output_path="static_chart.xlsx"
+    generator = ChartGenerator(xls_data, output_path)
+    generator.generate_excel_summary("Summary")
 
-        if recognition_by_name_key not in top_award_givers_count_hash:
-            top_award_givers_count_hash[recognition_by_name_key] = 0
-
-        top_award_givers_count_hash[recognition_by_name_key] += 1
-        top_award_givers_name_hash[recognition_by_name_key] = value['message_by']
-
-
-    xls_data = [
-        top_award_givers_count_hash,
-        top_award_givers_name_hash
+    headers = [
+            "Award Name", "Category", "Message", "Given By", "Employee ID of Given By", "Approved By", 
+            "Given To", "Employee Id of Given To", "Manager", "Manager Employee Id", "Given On (mm/dd/yyyy)", 
+            "Gamification Points", "Reward Points", "Total Reward Points", "Departments", "Departments2"
     ]
 
-    
-
-    #---------------------------------
-    chart_data = [
-        ("Namrata Puranik Puranik", 51),
-        ("Gauri Puranik", 16),
-        ("Aalkhimovich aalk", 16),
-        ("Alumni User", 10),
-        ("Ankur Tripathi", 7),
-    ]
-    
-    chart_data_issuers = [
-        ("Gauri Puranik", 84),
-        ("Namrata Puranik Puranik", 21)
-    ]
-    
-    generator = ChartGenerator(chart_data, chart_data_issuers)
-    generator.generate_excel()
+    generator.generate_excel_data("Data", headers)
    
 except Exception as ex:
     print(ex)
