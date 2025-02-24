@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import argparse
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, Reference
@@ -9,7 +10,6 @@ from db_helper import DatabaseConnection
 from chartgenerator import ChartGenerator
 from collections import Counter
 
-db = DatabaseConnection(host="localhost", user="root", password="root", database="mangoapps_dev")
 
 def parse_recognition_name(recog_name):
     try:
@@ -73,6 +73,19 @@ def get_recognition_data(db, parse_recognition_name):
     return recognition_hash, awardees_hash, approver_hash
 
 try:
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--filepath", type=str, required=True, help="File_Path")
+    #args = parser.parse_args()
+    #filePath = args.filepath
+    filePath = "C:\\GIT\\MangoAppsReports\\MangoAppsReports\\recg_data.txt"
+
+    with open(filePath, "r") as json_file:
+        data = json.load(json_file)  
+
+    db = DatabaseConnection(host="localhost", user=data['user'], password=data['password'], database=data['database'])
+    output_path = data['filePath']
+
     db.connect()
     recognition_hash, awardees_hash, approver_hash = get_recognition_data(db, parse_recognition_name)
     print(recognition_hash)
@@ -81,10 +94,9 @@ try:
     
     xls_data = {}
     xls_data['first_header'] = "RECOGNITIONS REPORT"
-    xls_data['second_header'] = "Dec 01, 2023 - Nov 30, 2024"
+    xls_data['second_header'] = data['date']
     xls_data['header_font_size'] = 11
 
-    
     issuer_count = Counter(entry['message_by'] for entry in recognition_hash.values())
     chart_data_issuers = list(issuer_count.items())
     chart_data = [(v['username'], int(v['award_count'])) for v in awardees_hash.values()]
@@ -92,7 +104,6 @@ try:
     xls_data['chart_data_issuers'] = chart_data_issuers
     xls_data['chart_data'] = chart_data
     
-    output_path="static_chart.xlsx"
     generator = ChartGenerator(xls_data, output_path)
     generator.generate_excel_summary("Summary")
 
@@ -102,7 +113,7 @@ try:
             "Gamification Points", "Reward Points", "Total Reward Points", "Departments", "Departments2"
     ]
 
-    generator.generate_excel_data("Data", headers)
+    generator.generate_excel_data("Data", headers, recognition_hash)
    
 except Exception as ex:
     print(ex)

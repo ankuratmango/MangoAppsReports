@@ -93,7 +93,7 @@ class ChartGenerator:
         self.create_chart("MRR_I", self.xls_data['chart_data_issuers'], "Top Issuing Users", "D25")
         print(f"Excel file created successfully: {self.output_path}")
 
-    def generate_excel_data(self, sheet, headers):
+    def generate_excel_data(self, sheet, headers, recognition_hash):
         self.data_worksheet = self.workbook.add_worksheet(sheet)
         self.data_worksheet.select()
         
@@ -110,6 +110,32 @@ class ChartGenerator:
 
         for col_num, header in enumerate(headers):
             self.data_worksheet.set_column(col_num, col_num, len(header) + 5)
+
+        date_format = self.workbook.add_format({'num_format': 'mm/dd/yyyy'})
+        row_num = 1
+        for entry in recognition_hash.values():
+            self.data_worksheet.write(row_num, 0, entry.get("award_recognition_name", ""))  
+            self.data_worksheet.write(row_num, 1, entry.get("award_recognition_category", ""))  
+            self.data_worksheet.write(row_num, 2, entry.get("message", ""))  
+            self.data_worksheet.write(row_num, 3, entry.get("message_by", ""))  
+            self.data_worksheet.write(row_num, 4, entry.get("given_by_emp_id", ""))  
+            self.data_worksheet.write(row_num, 5, "")  
+            self.data_worksheet.write(row_num, 6, entry.get("message_to", ""))  
+            self.data_worksheet.write(row_num, 7, entry.get("message_to_emp_id", ""))  
+            self.data_worksheet.write(row_num, 8, "")  
+            self.data_worksheet.write(row_num, 9, "")  
+        
+            date_value = entry.get("message_given_on", "")
+            if date_value:
+                self.data_worksheet.write_datetime(row_num, 10, date_value, date_format)  
+        
+            self.data_worksheet.write(row_num, 11, int(entry.get("award_points", 0)))  
+            self.data_worksheet.write(row_num, 12, entry.get("award_reward_points", ""))  
+            self.data_worksheet.write(row_num, 13, entry.get("award_total_reward_points", ""))  
+            self.data_worksheet.write(row_num, 14, entry.get("team_name", "")) 
+            self.data_worksheet.write(row_num, 15, "")  
+
+            row_num += 1  
 
         self.workbook.close()
         
