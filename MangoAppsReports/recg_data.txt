@@ -1,0 +1,7 @@
+{
+  "user": "root",
+  "password": "root",
+  "database": "mangoapps_dev",
+  "filePath": "C:\\GIT\\MangoAppsReports\\MangoAppsReports\\recognizationPath_25_24_02_14_30_45.xls",
+  "date": "Dec 01, 2023 - Nov 30, 2024"
+}

@@ -72,8 +72,41 @@ def get_recognition_data(db, parse_recognition_name):
     }
     return recognition_hash, awardees_hash, approver_hash
 
-try:
+def get_department_label(domain_id, options, header, xls_data, db):
+    query_recog = f"""
+        SELECT department_label FROM DomainPreference WHERE domain_id = {domain_id}
+    """
+    department_label_result = db.fetch_all(query_recog)
+    department_label = department_label_result[0]['department_label'] if department_label_result else None
+    
+    if department_label == "{{tr.module.department}}":
+        query_recog = f"""
+            SELECT id FROM CustomTranslator 
+            WHERE domain_id = {domain_id} 
+            AND module_db_key = 'department_label' 
+            AND module_table = 'DomainPreference'
+        """
+        dept_translator_obj_result = db.fetch_all(query_recog)
+        dept_translator_obj = dept_translator_obj_result[0] if dept_translator_obj_result else None
+        
+        if dept_translator_obj:
+            query_recog = f"""
+                SELECT value FROM CustomTranslatorValue 
+                WHERE custom_translator_id = {dept_translator_obj['id']} 
+                AND is_enabled = TRUE 
+                AND locale = '{options.get('domain_locale')}'
+            """
+            dept_locale_value_result = db.fetch_all(query_recog)
+            department_label = dept_locale_value_result[0]['value'] if dept_locale_value_result else "Departments"
+        else:
+            department_label = "Departments"
+    
+    # if header and 'Departments' in header:
+    #     xls_data['headers'].append(CommonUtils.desanitize_it(MangoEmoji.decode_emoji(department_label)))
 
+
+try:
+    domain_id = 1
     parser = argparse.ArgumentParser()
     parser.add_argument("--filepath", type=str, required=True, help="File_Path")
     #args = parser.parse_args()
@@ -113,7 +146,11 @@ try:
             "Gamification Points", "Reward Points", "Total Reward Points", "Departments", "Departments2"
     ]
 
-    generator.generate_excel_data("Data", headers, recognition_hash)
+    #----------------------
+   
+    #----------------------
+
+    generator.generate_excel_data("Data", headers, recognition_hash, approver_hash)
    
 except Exception as ex:
     print(ex)

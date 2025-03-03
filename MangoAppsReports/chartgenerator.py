@@ -93,7 +93,7 @@ class ChartGenerator:
         self.create_chart("MRR_I", self.xls_data['chart_data_issuers'], "Top Issuing Users", "D25")
         print(f"Excel file created successfully: {self.output_path}")
 
-    def generate_excel_data(self, sheet, headers, recognition_hash):
+    def generate_excel_data(self, sheet, headers, recognition_hash, approver_hash):
         self.data_worksheet = self.workbook.add_worksheet(sheet)
         self.data_worksheet.select()
         
@@ -113,13 +113,14 @@ class ChartGenerator:
 
         date_format = self.workbook.add_format({'num_format': 'mm/dd/yyyy'})
         row_num = 1
-        for entry in recognition_hash.values():
+        for key, entry in recognition_hash.items():
             self.data_worksheet.write(row_num, 0, entry.get("award_recognition_name", ""))  
             self.data_worksheet.write(row_num, 1, entry.get("award_recognition_category", ""))  
             self.data_worksheet.write(row_num, 2, entry.get("message", ""))  
             self.data_worksheet.write(row_num, 3, entry.get("message_by", ""))  
             self.data_worksheet.write(row_num, 4, entry.get("given_by_emp_id", ""))  
-            self.data_worksheet.write(row_num, 5, "")  
+            if(key in approver_hash):
+                self.data_worksheet.write(row_num, 5, approver_hash[key]["approver_name"])  
             self.data_worksheet.write(row_num, 6, entry.get("message_to", ""))  
             self.data_worksheet.write(row_num, 7, entry.get("message_to_emp_id", ""))  
             self.data_worksheet.write(row_num, 8, "")  
@@ -128,6 +129,24 @@ class ChartGenerator:
             date_value = entry.get("message_given_on", "")
             if date_value:
                 self.data_worksheet.write_datetime(row_num, 10, date_value, date_format)  
+
+            if 'receiver_ids' in entry and entry['receiver_ids']:
+                receiver_ids = entry['receiver_ids'].split(",")
+
+                query_recog =  query_recog = f"""
+                SELECT m.emp_id, m.name 
+                FROM User u
+                JOIN user_relationship ur ON ur.user_id = u.id 
+                JOIN managers_user_relationships m ON m.id = ur.manager_id 
+                WHERE u.id IN ({', '.join(receiver_ids)})"""
+                
+                managers = db.fetch_all(query_recog)
+        
+                # if column_setting.get('manager'):
+                #     data.append(",".join(sorted(set(manager['name'] for manager in managers if manager['name']))))
+        
+                # if column_setting.get('manager_employee_id'):
+                #     data.append(",".join(sorted(set(manager['emp_id'] for manager in managers if manager['emp_id']))))
         
             self.data_worksheet.write(row_num, 11, int(entry.get("award_points", 0)))  
             self.data_worksheet.write(row_num, 12, entry.get("award_reward_points", ""))  
